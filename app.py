@@ -1,5 +1,5 @@
 import streamlit as st
-import rarfile
+from unrar import rarfile 
 import os
         
 st.set_page_config(layout="wide", page_title="Heart Disease Prediction")
