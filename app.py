@@ -1,5 +1,12 @@
 import streamlit as st
-
+import rarfile
+import os
+def unpack_models(archive_path='RGR_models.rar', extract_to='models'):
+    if not os.path.exists(extract_to):
+        os.makedirs(extract_to)
+    with rarfile.RarFile(archive_path) as rf:
+        rf.extractall(path=extract_to)
+        
 st.set_page_config(layout="wide", page_title="Heart Disease Prediction")
 
 import pickle
@@ -14,16 +21,19 @@ from tensorflow.keras.models import load_model as load_keras_model
 @st.cache_resource
 def load_models():
     models = {}
-    with open('RGR_model_KNN.pkl', 'rb') as f:
+    models_dir = 'models'
+    
+    with open(os.path.join(models_dir, 'RGR_model_KNN.pkl'), 'rb') as f:
         models['knn'] = pickle.load(f)
-    with open('RGR_GradientBoosting.pkl', 'rb') as f:
+    with open(os.path.join(models_dir, 'RGR_GradientBoosting.pkl'), 'rb') as f:
         models['gb'] = pickle.load(f)
-    models['catboost'] = CatBoostClassifier().load_model('RGR_CatBoost.cbm')
-    with open('RGR_bagging.pkl', 'rb') as f:
+    models['catboost'] = CatBoostClassifier().load_model(os.path.join(models_dir, 'RGR_CatBoost.cbm'))
+    with open(os.path.join(models_dir, 'RGR_bagging.pkl'), 'rb') as f:
         models['bagging'] = pickle.load(f)
-    with open('RGR_Stacking.pkl', 'rb') as f:
+    with open(os.path.join(models_dir, 'RGR_Stacking.pkl'), 'rb') as f:
         models['stacking'] = pickle.load(f)
-    models['keras'] = load_keras_model('RGR_Keras_Adam.h5')
+    models['keras'] = load_keras_model(os.path.join(models_dir, 'RGR_Keras_Adam.h5'))
+    
     return models
 
 
