@@ -16,7 +16,7 @@ from tensorflow.keras.models import load_model as load_keras_model
 @st.cache_resource
 def load_models():
     models = {}
-    models_dir = 'models'
+    models_dir = 'models/RGR_models'  # обновлено
     
     with open(os.path.join(models_dir, 'RGR_model_KNN.pkl'), 'rb') as f:
         models['knn'] = pickle.load(f)
@@ -30,7 +30,7 @@ def load_models():
     models['keras'] = load_keras_model(os.path.join(models_dir, 'RGR_Keras_Adam.h5'))
     
     return models
-    
+        
 def unpack_models(archive_path='RGR_models.zip', extract_to='models'):
     try:
         if not os.path.exists(extract_to):
