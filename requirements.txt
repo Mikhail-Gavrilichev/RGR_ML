@@ -7,3 +7,4 @@ scikit-learn
 catboost
 tensorflow
 rarfile
+unrar
