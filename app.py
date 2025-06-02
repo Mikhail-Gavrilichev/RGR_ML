@@ -1,5 +1,5 @@
 import streamlit as st
-from unrar import rarfile 
+import zipfile
 import os
         
 st.set_page_config(layout="wide", page_title="Heart Disease Prediction")
@@ -31,11 +31,17 @@ def load_models():
     
     return models
     
-def unpack_models(archive_path='RGR_models.rar', extract_to='models'):
-    if not os.path.exists(extract_to):
-        os.makedirs(extract_to)
-    with rarfile.RarFile(archive_path) as rf:
-        rf.extractall(path=extract_to)
+def unpack_models(archive_path='models.zip', extract_to='models'):
+    try:
+        if not os.path.exists(extract_to):
+            os.makedirs(extract_to)
+        with zipfile.ZipFile(archive_path, 'r') as zf:
+            zf.extractall(extract_to)
+        st.success("Модели успешно распакованы!")
+        return True
+    except Exception as e:
+        st.error(f"Ошибка распаковки: {e}")
+        return False
 
 unpack_models()
 models = load_models()
