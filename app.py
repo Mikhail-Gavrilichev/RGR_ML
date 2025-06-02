@@ -1,11 +1,6 @@
 import streamlit as st
 import rarfile
 import os
-def unpack_models(archive_path='RGR_models.rar', extract_to='models'):
-    if not os.path.exists(extract_to):
-        os.makedirs(extract_to)
-    with rarfile.RarFile(archive_path) as rf:
-        rf.extractall(path=extract_to)
         
 st.set_page_config(layout="wide", page_title="Heart Disease Prediction")
 
@@ -35,8 +30,14 @@ def load_models():
     models['keras'] = load_keras_model(os.path.join(models_dir, 'RGR_Keras_Adam.h5'))
     
     return models
+    
+def unpack_models(archive_path='RGR_models.rar', extract_to='models'):
+    if not os.path.exists(extract_to):
+        os.makedirs(extract_to)
+    with rarfile.RarFile(archive_path) as rf:
+        rf.extractall(path=extract_to)
 
-
+unpack_models()
 models = load_models()
 
 # Сайдбар для навигации
