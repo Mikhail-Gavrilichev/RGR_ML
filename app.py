@@ -31,7 +31,7 @@ def load_models():
     
     return models
     
-def unpack_models(archive_path='models.zip', extract_to='models'):
+def unpack_models(archive_path='RGR_models.zip', extract_to='models'):
     try:
         if not os.path.exists(extract_to):
             os.makedirs(extract_to)
