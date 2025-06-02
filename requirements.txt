@@ -6,5 +6,4 @@ numpy
 scikit-learn
 catboost
 tensorflow
-rarfile
 python-unrar
