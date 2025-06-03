@@ -154,9 +154,21 @@ elif page == "Визуализация":
 elif page == "Предсказания":
     st.title("Предсказания сердечно-сосудистых заболеваний")
 
+    # Загрузка оригинальных данных для оценки качества
+    @st.cache_data
+    def load_original_data():
+        df = pd.read_csv('data_classification.csv')
+        df['AgeGroup'] = df['age'].apply(lambda age: 1 if age <= 20 else 2 if age <= 40 else 3 if age <= 60 else 4)
+        df['target'] = df['num'].apply(lambda x: 1 if x > 0 else 0)  # Бинарная целевая переменная
+        return df
+
+    original_data = load_original_data()
+    required_cols = ['age', 'sex', 'cp', 'trestbps', 'chol', 'fbs', 'restecg',
+                    'thalach', 'exang', 'oldpeak', 'slope', 'ca', 'thal', 'AgeGroup']
+
     # Выбор модели
     model_type = st.selectbox("Select Model:",
-                              ["KNN", "gb", "CatBoost", "Bagging", "Stacking", "Keras"])
+                            ["KNN", "gb", "CatBoost", "Bagging", "Stacking", "Keras"])
 
     # Способ ввода данных
     input_method = st.radio("Input Method:", ["Upload CSV File", "Manual Input"])
@@ -168,8 +180,6 @@ elif page == "Предсказания":
             input_df['AgeGroup'] = input_df['age'].apply(
                     lambda age: 1 if age <= 20 else 2 if age <= 40 else 3 if age <= 60 else 4
                 )
-            required_cols = ['age', 'sex', 'cp', 'trestbps', 'chol', 'fbs', 'restecg',
-                             'thalach', 'exang', 'oldpeak', 'slope', 'ca', 'thal', 'AgeGroup']
 
             if all(col in input_df.columns for col in required_cols):
                 st.write("Uploaded Data Preview:")
@@ -177,9 +187,13 @@ elif page == "Предсказания":
 
                 if st.button("Predict"):
                     model = models[model_type.lower().replace(" ", "")]
+                    
+                    # Получаем предсказания
                     predictions = model.predict(input_df[required_cols])
+                    
+                    # Получаем вероятности, если модель поддерживает
                     proba = model.predict_proba(input_df[required_cols])[:, 1] if hasattr(model,
-                                                                                          "predict_proba") else None
+                                                                                        "predict_proba") else None
 
                     result_df = input_df.copy()
                     result_df['Prediction'] = ['Disease' if p == 1 else 'No Disease' for p in predictions]
@@ -188,6 +202,60 @@ elif page == "Предсказания":
 
                     st.success("Predictions completed!")
                     st.dataframe(result_df)
+
+                    # Вычисляем метрики качества на оригинальных данных
+                    st.subheader("Model Quality Metrics (на оригинальных данных)")
+                    
+                    # Подготовка данных
+                    X_original = original_data[required_cols]
+                    y_original = original_data['target']
+                    
+                    # Получаем предсказания для оригинальных данных
+                    original_predictions = model.predict(X_original)
+                    
+                    # Вычисляем метрики
+                    from sklearn.metrics import (accuracy_score, precision_score, 
+                                              recall_score, f1_score, roc_auc_score,
+                                              confusion_matrix, classification_report)
+                    
+                    accuracy = accuracy_score(y_original, original_predictions)
+                    precision = precision_score(y_original, original_predictions)
+                    recall = recall_score(y_original, original_predictions)
+                    f1 = f1_score(y_original, original_predictions)
+                    
+                    # ROC-AUC (только если модель возвращает вероятности)
+                    if hasattr(model, "predict_proba"):
+                        y_proba = model.predict_proba(X_original)[:, 1]
+                        roc_auc = roc_auc_score(y_original, y_proba)
+                    else:
+                        roc_auc = "N/A"
+                    
+                    # Отображаем метрики
+                    metrics_df = pd.DataFrame({
+                        'Metric': ['Accuracy', 'Precision', 'Recall', 'F1-Score', 'ROC-AUC'],
+                        'Value': [f"{accuracy:.3f}", f"{precision:.3f}", 
+                                 f"{recall:.3f}", f"{f1:.3f}", 
+                                 f"{roc_auc:.3f}" if isinstance(roc_auc, float) else roc_auc]
+                    })
+                    
+                    st.table(metrics_df)
+                    
+                    # Матрица ошибок
+                    st.subheader("Confusion Matrix")
+                    cm = confusion_matrix(y_original, original_predictions)
+                    fig, ax = plt.subplots()
+                    sns.heatmap(cm, annot=True, fmt='d', ax=ax, 
+                                xticklabels=['No Disease', 'Disease'], 
+                                yticklabels=['No Disease', 'Disease'])
+                    ax.set_xlabel('Predicted')
+                    ax.set_ylabel('Actual')
+                    st.pyplot(fig)
+                    
+                    # Отчет классификации
+                    st.subheader("Classification Report")
+                    report = classification_report(y_original, original_predictions, output_dict=True)
+                    report_df = pd.DataFrame(report).transpose()
+                    st.table(report_df)
 
                     csv = result_df.to_csv(index=False).encode('utf-8')
                     st.download_button(
@@ -281,3 +349,37 @@ elif page == "Предсказания":
             if disease_proba is not None:
                 st.write(f"Вероятность наличия болезни (классы 1-4): {disease_proba:.1%}")
                 st.progress(int(disease_proba * 100))
+                
+            # Вывод информации о качестве модели на оригинальных данных
+            st.subheader("Model Quality Metrics (на оригинальных данных)")
+            
+            # Подготовка данных
+            X_original = original_data[required_cols]
+            y_original = original_data['target']
+            
+            # Получаем предсказания для оригинальных данных
+            original_predictions = model.predict(X_original)
+            
+            # Вычисляем метрики
+            from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+            
+            accuracy = accuracy_score(y_original, original_predictions)
+            precision = precision_score(y_original, original_predictions)
+            recall = recall_score(y_original, original_predictions)
+            f1 = f1_score(y_original, original_predictions)
+            
+            metrics_df = pd.DataFrame({
+                'Metric': ['Accuracy', 'Precision', 'Recall', 'F1-Score'],
+                'Value': [f"{accuracy:.3f}", f"{precision:.3f}", f"{recall:.3f}", f"{f1:.3f}"]
+            })
+            
+            st.table(metrics_df)
+            
+            # Краткая интерпретация метрик
+            st.subheader("Интерпретация метрик")
+            st.write("""
+            - **Accuracy (Точность)**: Доля правильных предсказаний среди всех сделанных.
+            - **Precision (Точность)**: Доля правильно предсказанных больных среди всех предсказанных как больные.
+            - **Recall (Полнота)**: Доль правильно предсказанных больных среди всех действительно больных.
+            - **F1-Score**: Гармоническое среднее точности и полноты.
+            """)
