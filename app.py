@@ -218,7 +218,6 @@ elif page == "Предсказания":
                                               confusion_matrix, classification_report)
                     
                     accuracy = accuracy_score(y_original, original_predictions)
-                    precision = precision_score(y_original, original_predictions)
                     recall = recall_score(y_original, original_predictions)
                     f1 = f1_score(y_original, original_predictions)
                     
@@ -231,8 +230,8 @@ elif page == "Предсказания":
                     
                     # Отображаем метрики
                     metrics_df = pd.DataFrame({
-                        'Metric': ['Accuracy', 'Precision', 'Recall', 'F1-Score', 'ROC-AUC'],
-                        'Value': [f"{accuracy:.3f}", f"{precision:.3f}", 
+                        'Metric': ['Accuracy', 'Recall', 'F1-Score', 'ROC-AUC'],
+                        'Value': [f"{accuracy:.3f}", 
                                  f"{recall:.3f}", f"{f1:.3f}", 
                                  f"{roc_auc:.3f}" if isinstance(roc_auc, float) else roc_auc]
                     })
@@ -363,13 +362,12 @@ elif page == "Предсказания":
             from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
             
             accuracy = accuracy_score(y_original, original_predictions)
-            precision = precision_score(y_original, original_predictions)
             recall = recall_score(y_original, original_predictions)
             f1 = f1_score(y_original, original_predictions)
             
             metrics_df = pd.DataFrame({
-                'Metric': ['Accuracy', 'Precision', 'Recall', 'F1-Score'],
-                'Value': [f"{accuracy:.3f}", f"{precision:.3f}", f"{recall:.3f}", f"{f1:.3f}"]
+                'Metric': ['Accuracy', 'Recall', 'F1-Score'],
+                'Value': [f"{accuracy:.3f}", f"{recall:.3f}", f"{f1:.3f}"]
             })
             
             st.table(metrics_df)
@@ -378,7 +376,6 @@ elif page == "Предсказания":
             st.subheader("Интерпретация метрик")
             st.write("""
             - **Accuracy (Точность)**: Доля правильных предсказаний среди всех сделанных.
-            - **Precision (Точность)**: Доля правильно предсказанных больных среди всех предсказанных как больные.
             - **Recall (Полнота)**: Доль правильно предсказанных больных среди всех действительно больных.
             - **F1-Score**: Гармоническое среднее точности и полноты.
             """)
