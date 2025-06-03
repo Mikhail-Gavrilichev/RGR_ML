@@ -12,12 +12,15 @@ import seaborn as sns
 import numpy as np
 from catboost import CatBoostClassifier
 from tensorflow.keras.models import load_model as load_keras_model
+from sklearn.metrics import (accuracy_score, precision_score, recall_score, 
+                           f1_score, roc_auc_score, confusion_matrix, 
+                           classification_report)
 
 # Загрузка моделей
 @st.cache_resource
 def load_models():
     models = {}
-    models_dir = 'models/RGR_models'  # обновлено
+    models_dir = 'models/RGR_models'
     
     with open(os.path.join(models_dir, 'RGR_model_KNN.pkl'), 'rb') as f:
         models['knn'] = pickle.load(f)
@@ -48,8 +51,8 @@ unpack_models()
 models = load_models()
 
 # Сайдбар для навигации
-st.sidebar.title("Navigation")
-page = st.sidebar.radio("Go to:",
+st.sidebar.title("Навигация")
+page = st.sidebar.radio("Перейти:",
                         ["О разработчике", "Информация о наборе данных", "Визуализация", "Предсказания"])
 
 # Страница 1: О разработчике
@@ -73,7 +76,7 @@ elif page == "Информация о наборе данных":
     st.header("Описание датасета")
     st.write("""
     Этот набор данных содержит медицинскую информацию о 303 пациентах и их статусе заболеваний сердца.
-    Столбец «num» — это целевая переменная (0 = нет заболевания, 1–4 = наличие заболевания).
+    Столбец 'num' - это целевая переменная (0 = нет заболевания, 1-4 = наличие заболевания).
     """)
 
     st.header("Описание признаков")
@@ -101,61 +104,34 @@ elif page == "Информация о наборе данных":
     })
     st.table(features)
 
-    st.header("Обработка данных")
-    st.write("""
-    - Изменение типа данных: Тип данных столбцов 'ca' и 'thal' изменен на int.
-    - Редактирование данных: Добавлены возрастные группы
-    - Обработка выбросов: Выбросы обнаруженые в параметрах chol, oldpeak удалены.
-    """)
-
 # Страница 3: Визуализации
 elif page == "Визуализация":
     st.title("Анализ данных и визуализация")
 
-
     @st.cache_data
     def load_data():
         df = pd.read_csv('data_classification.csv')
-        # Create binary target for visualization
         df['heart_disease'] = df['num'].apply(lambda x: 1 if x > 0 else 0)
         return df
 
-
     df = load_data()
 
-    # 1. Target distribution
-    st.subheader("Heart Disease Distribution")
+    st.subheader("Распределение заболеваний сердца")
     fig1, ax1 = plt.subplots()
     df['heart_disease'].value_counts().plot(kind='bar', ax=ax1)
-    ax1.set_xticklabels(['No Disease', 'Disease'], rotation=0)
+    ax1.set_xticklabels(['Нет заболевания', 'Есть заболевание'], rotation=0)
     st.pyplot(fig1)
 
-    # 2. Age distribution by disease status
-    st.subheader("Age Distribution by Disease Status")
+    st.subheader("Распределение возраста по статусу заболевания")
     fig2, ax2 = plt.subplots()
     sns.boxplot(data=df, x='heart_disease', y='age', ax=ax2)
-    ax2.set_xticklabels(['No Disease', 'Disease'])
+    ax2.set_xticklabels(['Нет заболевания', 'Есть заболевание'])
     st.pyplot(fig2)
-
-    # 3. Correlation heatmap
-    st.subheader("Feature Correlation Matrix")
-    fig3, ax3 = plt.subplots(figsize=(10, 8))
-    numeric_cols = ['age', 'trestbps', 'chol', 'thalach', 'oldpeak', 'ca']
-    sns.heatmap(df[numeric_cols + ['heart_disease']].corr(), annot=True, ax=ax3)
-    st.pyplot(fig3)
-
-    # 4. Cholesterol vs Age with disease status
-    st.subheader("Cholesterol vs Age by Disease Status")
-    fig4, ax4 = plt.subplots()
-    sns.scatterplot(data=df, x='age', y='chol', hue='heart_disease', ax=ax4)
-    ax4.legend(title='Heart Disease', labels=['No', 'Yes'])
-    st.pyplot(fig4)
 
 # Страница 4: Предсказания
 elif page == "Предсказания":
-    st.title("Предсказания сердечно-сосудистых заболеваний")
+    st.title("Предсказание сердечно-сосудистых заболеваний")
 
-    # Загрузка оригинальных данных для оценки качества
     @st.cache_data
     def load_original_data():
         df = pd.read_csv('data_classification.csv')
@@ -165,105 +141,76 @@ elif page == "Предсказания":
     required_cols = ['age', 'sex', 'cp', 'trestbps', 'chol', 'fbs', 'restecg',
                     'thalach', 'exang', 'oldpeak', 'slope', 'ca', 'thal', 'AgeGroup']
 
-    # Выбор модели
-    model_type = st.selectbox("Select Model:",
-                            ["KNN", "gb", "CatBoost", "Bagging", "Stacking", "Keras"])
+    model_type = st.selectbox("Выберите модель:",
+                            ["KNN", "Gradient Boosting", "CatBoost", "Bagging", "Stacking", "Keras"])
 
-    # Способ ввода данных
-    input_method = st.radio("Input Method:", ["Upload CSV File", "Manual Input"])
+    input_method = st.radio("Способ ввода данных:", ["Загрузка CSV файла", "Ручной ввод"])
 
-    if input_method == "Upload CSV File":
-        uploaded_file = st.file_uploader("Upload CSV File", type="csv")
+    if input_method == "Загрузка CSV файла":
+        uploaded_file = st.file_uploader("Загрузите CSV файл", type="csv")
         if uploaded_file:
             input_df = pd.read_csv(uploaded_file)
             input_df['AgeGroup'] = input_df['age'].apply(
-                    lambda age: 1 if age <= 20 else 2 if age <= 40 else 3 if age <= 60 else 4
-                )
+                lambda age: 1 if age <= 20 else 2 if age <= 40 else 3 if age <= 60 else 4
+            )
 
             if all(col in input_df.columns for col in required_cols):
-                st.write("Uploaded Data Preview:")
+                st.write("Предпросмотр данных:")
                 st.dataframe(input_df.head())
 
-                if st.button("Predict"):
+                if st.button("Предсказать"):
                     model = models[model_type.lower().replace(" ", "")]
-                    
-                    # Получаем предсказания
                     predictions = model.predict(input_df[required_cols])
                     
-                    # Получаем вероятности, если модель поддерживает
-                    proba = model.predict_proba(input_df[required_cols])[:, 1] if hasattr(model,
-                                                                                        "predict_proba") else None
-
+                    # Преобразуем в бинарную классификацию
+                    predictions_binary = (predictions > 0).astype(int)
+                    
                     result_df = input_df.copy()
-                    result_df['Prediction'] = ['Disease' if p == 1 else 'No Disease' for p in predictions]
-                    if proba is not None:
-                        result_df['Probability'] = proba
+                    result_df['Prediction'] = ['Есть заболевание' if p == 1 else 'Нет заболевания' for p in predictions_binary]
+                    
+                    if hasattr(model, "predict_proba"):
+                        probas = model.predict_proba(input_df[required_cols])
+                        if probas.shape[1] > 2:  # Многоклассовый случай
+                            result_df['Probability'] = [sum(p[1:]) for p in probas]
+                        else:
+                            result_df['Probability'] = probas[:, 1]
 
-                    st.success("Predictions completed!")
+                    st.success("Предсказание завершено!")
                     st.dataframe(result_df)
 
-                    # Вычисляем метрики качества на оригинальных данных
-                    st.subheader("Model Quality Metrics (на оригинальных данных)")
+                    # Оценка качества модели
+                    st.subheader("Метрики качества модели")
                     
-                    # Подготовка данных
                     X_original = original_data[required_cols]
                     y_original = original_data['num']
+                    y_original_binary = (y_original > 0).astype(int)
                     
-                    # Получаем предсказания для оригинальных данных
                     original_predictions = model.predict(X_original)
+                    original_predictions_binary = (original_predictions > 0).astype(int)
                     
-                    # Вычисляем метрики
-                    from sklearn.metrics import (accuracy_score, precision_score, 
-                                              recall_score, f1_score, roc_auc_score,
-                                              confusion_matrix, classification_report)
+                    accuracy = accuracy_score(y_original_binary, original_predictions_binary)
+                    precision = precision_score(y_original_binary, original_predictions_binary)
+                    recall = recall_score(y_original_binary, original_predictions_binary)
+                    f1 = f1_score(y_original_binary, original_predictions_binary)
                     
-                    accuracy = accuracy_score(y_original, original_predictions)
-                    recall = recall_score(y_original, original_predictions)
-                    f1 = f1_score(y_original, original_predictions)
-                    
-                    # ROC-AUC (только если модель возвращает вероятности)
-                    if hasattr(model, "predict_proba"):
-                        y_proba = model.predict_proba(X_original)[:, 1]
-                        roc_auc = roc_auc_score(y_original, y_proba)
-                    else:
-                        roc_auc = "N/A"
-                    
-                    # Отображаем метрики
                     metrics_df = pd.DataFrame({
-                        'Metric': ['Accuracy', 'Recall', 'F1-Score', 'ROC-AUC'],
-                        'Value': [f"{accuracy:.3f}", 
-                                 f"{recall:.3f}", f"{f1:.3f}", 
-                                 f"{roc_auc:.3f}" if isinstance(roc_auc, float) else roc_auc]
+                        'Метрика': ['Точность (Accuracy)', 'Точность (Precision)', 
+                                   'Полнота (Recall)', 'F1-мера'],
+                        'Значение': [f"{accuracy:.3f}", f"{precision:.3f}", 
+                                    f"{recall:.3f}", f"{f1:.3f}"]
                     })
-                    
                     st.table(metrics_df)
                     
                     # Матрица ошибок
-                    st.subheader("Confusion Matrix")
-                    cm = confusion_matrix(y_original, original_predictions)
+                    st.subheader("Матрица ошибок")
+                    cm = confusion_matrix(y_original_binary, original_predictions_binary)
                     fig, ax = plt.subplots()
-                    sns.heatmap(cm, annot=True, fmt='d', ax=ax, 
-                                xticklabels=['No Disease', 'Disease'], 
-                                yticklabels=['No Disease', 'Disease'])
-                    ax.set_xlabel('Predicted')
-                    ax.set_ylabel('Actual')
+                    sns.heatmap(cm, annot=True, fmt='d', ax=ax,
+                                xticklabels=['Нет заболевания', 'Есть заболевание'],
+                                yticklabels=['Нет заболевания', 'Есть заболевание'])
+                    ax.set_xlabel('Предсказание')
+                    ax.set_ylabel('Факт')
                     st.pyplot(fig)
-                    
-                    # Отчет классификации
-                    st.subheader("Classification Report")
-                    report = classification_report(y_original, original_predictions, output_dict=True)
-                    report_df = pd.DataFrame(report).transpose()
-                    st.table(report_df)
-
-                    csv = result_df.to_csv(index=False).encode('utf-8')
-                    st.download_button(
-                        "Download Predictions",
-                        csv,
-                        "heart_disease_predictions.csv",
-                        "text/csv"
-                    )
-            else:
-                st.error(f"CSV file must contain these columns: {', '.join(required_cols)}")
 
     else:  # Ручной ввод
         st.subheader("Введите информацию о пациенте:")
@@ -271,111 +218,73 @@ elif page == "Предсказания":
         col1, col2 = st.columns(2)
 
         with col1:
-            age = st.number_input("Age (years)", min_value=20, max_value=100, value=50)
-            sex = st.radio("Sex", ["Male", "Female"])
-            cp = st.selectbox("Chest Pain Type", [
-                "Typical angina",
-                "Atypical angina",
-                "Non-anginal pain",
-                "Asymptomatic"
+            age = st.number_input("Возраст (лет)", min_value=20, max_value=100, value=50)
+            sex = st.radio("Пол", ["Мужской", "Женский"])
+            cp = st.selectbox("Тип боли в груди", [
+                "Типичная стенокардия",
+                "Атипичная стенокардия",
+                "Боль без связи со стенокардией",
+                "Бессимптомная"
             ])
-            trestbps = st.number_input("Resting Blood Pressure (mm Hg)", min_value=80, max_value=200, value=120)
-            chol = st.number_input("Serum Cholesterol (mg/dl)", min_value=100, max_value=600, value=200)
-            fbs = st.radio("Fasting Blood Sugar > 120 mg/dl", ["No", "Yes"])
+            trestbps = st.number_input("Давление в покое (мм рт. ст.)", min_value=80, max_value=200, value=120)
+            chol = st.number_input("Холестерин (мг/дл)", min_value=100, max_value=600, value=200)
+            fbs = st.radio("Сахар натощак > 120 мг/дл", ["Нет", "Да"])
 
         with col2:
-            restecg = st.selectbox("Resting ECG", [
-                "Normal",
-                "ST-T wave abnormality",
-                "Left ventricular hypertrophy"
+            restecg = st.selectbox("ЭКГ в покое", [
+                "Норма",
+                "ST-T аномалия",
+                "Гипертрофия левого желудочка"
             ])
-            thalach = st.number_input("Max Heart Rate Achieved", min_value=60, max_value=220, value=150)
-            exang = st.radio("Exercise Induced Angina", ["No", "Yes"])
-            oldpeak = st.number_input("ST Depression Induced by Exercise", min_value=0.0, max_value=6.0, value=1.0)
-            slope = st.selectbox("Slope of Peak Exercise ST Segment", [
-                "Upsloping",
-                "Flat",
-                "Downsloping"
+            thalach = st.number_input("Макс. частота сердцебиения", min_value=60, max_value=220, value=150)
+            exang = st.radio("Стенокардия при нагрузке", ["Нет", "Да"])
+            oldpeak = st.number_input("Депрессия ST при нагрузке", min_value=0.0, max_value=6.0, value=1.0)
+            slope = st.selectbox("Наклон сегмента ST", [
+                "Восходящий",
+                "Плоский",
+                "Нисходящий"
             ])
-            ca = st.number_input("Number of Major Vessels Colored by Fluoroscopy", min_value=0, max_value=3, value=0)
-            thal = st.selectbox("Thalassemia", [
-                "Normal",
-                "Fixed Defect",
-                "Reversible Defect"
+            ca = st.number_input("Количество сосудов", min_value=0, max_value=3, value=0)
+            thal = st.selectbox("Талассемия", [
+                "Норма",
+                "Фиксированный дефект",
+                "Обратимый дефект"
             ])
 
-        if st.button("Predict"):
-            # Преобразование введенных данных
+        if st.button("Предсказать"):
             input_data = pd.DataFrame({
                 'age': [age],
-                'sex': [1 if sex == "Male" else 0],
-                'cp': [["Typical angina", "Atypical angina", "Non-anginal pain", "Asymptomatic"].index(cp) + 1],
+                'sex': [1 if sex == "Мужской" else 0],
+                'cp': [["Типичная стенокардия", "Атипичная стенокардия", 
+                       "Боль без связи со стенокардией", "Бессимптомная"].index(cp) + 1],
                 'trestbps': [trestbps],
                 'chol': [chol],
-                'fbs': [1 if fbs == "Yes" else 0],
-                'restecg': [["Normal", "ST-T wave abnormality", "Left ventricular hypertrophy"].index(restecg)],
+                'fbs': [1 if fbs == "Да" else 0],
+                'restecg': [["Норма", "ST-T аномалия", "Гипертрофия левого желудочка"].index(restecg)],
                 'thalach': [thalach],
-                'exang': [1 if exang == "Yes" else 0],
+                'exang': [1 if exang == "Да" else 0],
                 'oldpeak': [oldpeak],
-                'slope': [["Upsloping", "Flat", "Downsloping"].index(slope) + 1],
+                'slope': [["Восходящий", "Плоский", "Нисходящий"].index(slope) + 1],
                 'ca': [ca],
-                'thal': [["Normal", "Fixed Defect", "Reversible Defect"].index(thal) + 3],
+                'thal': [["Норма", "Фиксированный дефект", "Обратимый дефект"].index(thal) + 3],
                 'AgeGroup': [1 if age <= 20 else 2 if age <= 40 else 3 if age <= 60 else 4]
             })
         
             model = models[model_type.lower().replace(" ", "")]
-            predictions = model.predict(input_data)
+            prediction = model.predict(input_data)[0]
             
-            # Обработка предсказаний в зависимости от типа модели
-            if model_type.lower() == "keras":
-                prediction = np.argmax(predictions, axis=-1)[0]
-                disease_proba = predictions[0][1:].sum()  # Сумма вероятностей классов 1-4
-            else:
-                prediction = predictions[0] if isinstance(predictions, (np.ndarray, list)) else predictions
-                if hasattr(model, "predict_proba"):
-                    probas = model.predict_proba(input_data)
-                    disease_proba = sum(probas[0][1:]) if len(probas[0]) > 2 else probas[0][1]
-                else:
-                    disease_proba = None
-        
-            # Вывод результатов
+            # Обработка результатов
             if prediction == 0:
-                st.success("Результат: **Болезнь не обнаружена** (класс 0)")
+                st.success("Результат: **Заболевание не обнаружено**")
             else:
-                st.error(f"Результат: **Обнаружена болезнь** (класс {prediction})")
-        
-            if disease_proba is not None:
-                st.write(f"Вероятность наличия болезни (классы 1-4): {disease_proba:.1%}")
-                st.progress(int(disease_proba * 100))
+                st.error(f"Результат: **Обнаружено заболевание (класс {prediction})**")
+            
+            if hasattr(model, "predict_proba"):
+                proba = model.predict_proba(input_data)
+                if proba.shape[1] > 2:  # Многоклассовый случай
+                    disease_proba = sum(proba[0][1:])
+                else:
+                    disease_proba = proba[0][1]
                 
-            # Вывод информации о качестве модели на оригинальных данных
-            st.subheader("Model Quality Metrics (на оригинальных данных)")
-            
-            # Подготовка данных
-            X_original = original_data[required_cols]
-            y_original = original_data['num']
-            
-            # Получаем предсказания для оригинальных данных
-            original_predictions = model.predict(X_original)
-            
-            # Вычисляем метрики
-            from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-            
-            accuracy = accuracy_score(y_original, original_predictions)
-            recall = recall_score(y_original, original_predictions)
-            f1 = f1_score(y_original, original_predictions)
-            
-            metrics_df = pd.DataFrame({
-                'Metric': ['Accuracy', 'Recall', 'F1-Score'],
-                'Value': [f"{accuracy:.3f}", f"{recall:.3f}", f"{f1:.3f}"]
-            })
-            
-            st.table(metrics_df)
-            
-            # Краткая интерпретация метрик
-            st.subheader("Интерпретация метрик")
-            st.write("""
-            - **Accuracy (Точность)**: Доля правильных предсказаний среди всех сделанных.
-            - **Recall (Полнота)**: Доль правильно предсказанных больных среди всех действительно больных.
-            - **F1-Score**: Гармоническое среднее точности и полноты.
-            """)
+                st.write(f"Вероятность заболевания: {disease_proba:.1%}")
+                st.progress(int(disease_proba * 100))
