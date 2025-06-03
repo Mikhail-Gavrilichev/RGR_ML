@@ -5,6 +5,7 @@ import os
 st.set_page_config(layout="wide", page_title="Heart Disease Prediction")
 
 import pickle
+import sklearn
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
