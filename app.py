@@ -158,8 +158,6 @@ elif page == "Предсказания":
     @st.cache_data
     def load_original_data():
         df = pd.read_csv('data_classification.csv')
-        df['AgeGroup'] = df['age'].apply(lambda age: 1 if age <= 20 else 2 if age <= 40 else 3 if age <= 60 else 4)
-        df['target'] = df['num'].apply(lambda x: 1 if x > 0 else 0)  # Бинарная целевая переменная
         return df
 
     original_data = load_original_data()
@@ -208,7 +206,7 @@ elif page == "Предсказания":
                     
                     # Подготовка данных
                     X_original = original_data[required_cols]
-                    y_original = original_data['target']
+                    y_original = original_data['num']
                     
                     # Получаем предсказания для оригинальных данных
                     original_predictions = model.predict(X_original)
@@ -355,7 +353,7 @@ elif page == "Предсказания":
             
             # Подготовка данных
             X_original = original_data[required_cols]
-            y_original = original_data['target']
+            y_original = original_data['num']
             
             # Получаем предсказания для оригинальных данных
             original_predictions = model.predict(X_original)
