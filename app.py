@@ -160,21 +160,32 @@ elif page == "Предсказания":
 
                 if st.button("Предсказать"):
                     model = models[model_type.lower().replace(" ", "")]
+                    if model_type == "Keras":
+                            predictions = np.argmax(model.predict(input_df[required_cols]), axis=-1)
+                            predictions_binary = (predictions > 0).astype(int)
+                    
+                            # Получаем вероятности для Keras
+                            probas = model.predict(input_df[required_cols])
+                    if probas.shape[1] > 1:  # Многоклассовый случай
+                        disease_proba = np.max(probas, axis=1)
+                    else:
+                        disease_proba = probas.flatten()
+                else:
                     predictions = model.predict(input_df[required_cols])
-                    
-                    # Преобразуем в бинарную классификацию
                     predictions_binary = (predictions > 0).astype(int)
-                    
-                    result_df = input_df.copy()
-                    result_df['Prediction'] = ['Есть заболевание' if p == 1 else 'Нет заболевания' for p in predictions_binary]
                     
                     if hasattr(model, "predict_proba"):
                         probas = model.predict_proba(input_df[required_cols])
                         if probas.shape[1] > 2:  # Многоклассовый случай
-                            result_df['Probability'] = [sum(p[1:]) for p in probas]
+                            disease_proba = [sum(p[1:]) for p in probas]
                         else:
-                            result_df['Probability'] = probas[:, 1]
-
+                            disease_proba = probas[:, 1]
+                
+                result_df = input_df.copy()
+                result_df['Prediction'] = ['Есть заболевание' if p == 1 else 'Нет заболевания' for p in predictions_binary]
+                
+                if 'disease_proba' in locals():
+                    result_df['Probability'] = disease_proba
                     st.success("Предсказание завершено!")
                     st.dataframe(result_df)
 
@@ -271,7 +282,21 @@ elif page == "Предсказания":
             })
         
             model = models[model_type.lower().replace(" ", "")]
-            prediction = model.predict(input_data)[0]
+             if model_type == "Keras":
+                prediction = np.argmax(model.predict(input_data), axis=-1)[0]
+                proba = model.predict(input_data)
+                if proba.shape[1] > 1:  # Многоклассовый случай
+                    disease_proba = np.max(proba[0])
+                else:
+                    disease_proba = proba[0][0]
+            else:
+                prediction = model.predict(input_data)[0]
+                if hasattr(model, "predict_proba"):
+                    proba = model.predict_proba(input_data)
+                    if proba.shape[1] > 2:  # Многоклассовый случай
+                        disease_proba = sum(proba[0][1:])
+                    else:
+                        disease_proba = proba[0][1]
             
             # Обработка результатов
             if prediction == 0:
@@ -279,12 +304,6 @@ elif page == "Предсказания":
             else:
                 st.error(f"Результат: **Обнаружено заболевание (класс {prediction})**")
             
-            if hasattr(model, "predict_proba"):
-                proba = model.predict_proba(input_data)
-                if proba.shape[1] > 2:  # Многоклассовый случай
-                    disease_proba = sum(proba[0][1:])
-                else:
-                    disease_proba = proba[0][1]
-                
+            if 'disease_proba' in locals():
                 st.write(f"Вероятность заболевания: {disease_proba:.1%}")
                 st.progress(int(disease_proba * 100))
