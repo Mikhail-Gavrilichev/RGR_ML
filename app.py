@@ -136,14 +136,14 @@ elif page == "Предсказания":
     def load_original_data():
         df = pd.read_csv('data_classification.csv')
         return df
-
+            
     original_data = load_original_data()
     required_cols = ['age', 'sex', 'cp', 'trestbps', 'chol', 'fbs', 'restecg',
                     'thalach', 'exang', 'oldpeak', 'slope', 'ca', 'thal', 'AgeGroup']
-
+        
     model_type = st.selectbox("Выберите модель:",
-                            ["KNN", "Gradient Boosting", "CatBoost", "Bagging", "Stacking", "Keras"])
-
+                        ["KNN", "GB", "CatBoost", "Bagging", "Stacking", "Keras"])
+        
     input_method = st.radio("Способ ввода данных:", ["Загрузка CSV файла", "Ручной ввод"])
 
     if input_method == "Загрузка CSV файла":
