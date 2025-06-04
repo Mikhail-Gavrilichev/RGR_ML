@@ -37,7 +37,6 @@ def unpack_models(archive_path='RGR_models.zip', extract_to='models'):
             os.makedirs(extract_to)
         with zipfile.ZipFile(archive_path, 'r') as zf:
             zf.extractall(extract_to)
-        st.success("Модели успешно распакованы!")
         return True
     except Exception as e:
         st.error(f"Ошибка распаковки: {e}")
