@@ -120,17 +120,29 @@ elif page == "Визуализация":
 
     df = load_data()
 
-    st.subheader("Распределение заболеваний сердца")
+    st.subheader("Heart Disease Distribution")
     fig1, ax1 = plt.subplots()
     df['heart_disease'].value_counts().plot(kind='bar', ax=ax1)
-    ax1.set_xticklabels(['Нет заболевания', 'Есть заболевание'], rotation=0)
+    ax1.set_xticklabels(['No Disease', 'Disease'], rotation=0)
     st.pyplot(fig1)
 
-    st.subheader("Распределение возраста по статусу заболевания")
+    st.subheader("Age Distribution by Disease Status")
     fig2, ax2 = plt.subplots()
     sns.boxplot(data=df, x='heart_disease', y='age', ax=ax2)
-    ax2.set_xticklabels(['Нет заболевания', 'Есть заболевание'])
+    ax2.set_xticklabels(['No Disease', 'Disease'])
     st.pyplot(fig2)
+
+    st.subheader("Feature Correlation Matrix")
+    fig3, ax3 = plt.subplots(figsize=(10, 8))
+    numeric_cols = ['age', 'trestbps', 'chol', 'thalach', 'oldpeak', 'ca']
+    sns.heatmap(df[numeric_cols + ['heart_disease']].corr(), annot=True, ax=ax3)
+    st.pyplot(fig3)
+
+    st.subheader("Cholesterol vs Age by Disease Status")
+    fig4, ax4 = plt.subplots()
+    sns.scatterplot(data=df, x='age', y='chol', hue='heart_disease', ax=ax4)
+    ax4.legend(title='Heart Disease', labels=['No', 'Yes'])
+    st.pyplot(fig4)
 
 elif page == "Предсказания":
     st.title("Предсказание сердечно-сосудистых заболеваний")
